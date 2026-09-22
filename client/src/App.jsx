@@ -5,10 +5,16 @@ import ElderDashboard from "./pages/ElderDashboard.jsx";
 import FamilyDashboard from "./pages/FamilyDashboard.jsx";
 import Register from "./pages/Register.jsx";
 import Home from "./pages/Home.jsx";
+import RosePetalIntro from "./components/shared/RosePetalIntro.jsx";
 
 function Router() {
   const auth = useAuth();
+  const [showIntro, setShowIntro] = useState(true);
   const [path, setPath] = useState(window.location.pathname);
+
+  const handleIntroComplete = useCallback(() => {
+    setShowIntro(false);
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => setPath(window.location.pathname);
@@ -39,24 +45,28 @@ function Router() {
     }
   }, [auth.isAuthenticated, auth.user?.role, path, navigate]);
 
-  if (!auth.isAuthenticated && (path === "/" || path === "/register")) {
-    if (path === "/register") return <Register navigate={navigate} />;
-    return <Home navigate={navigate} />;
-  }
+  return (
+    <>
+      {/* 3D Rose Petals Falling & Forming ELDERCARE-AI Animation on White Background */}
+      {showIntro && <RosePetalIntro onComplete={handleIntroComplete} />}
 
-  if (!auth.isAuthenticated) {
-    return <Home navigate={navigate} />;
-  }
+      {!auth.isAuthenticated && (path === "/" || path === "/register") && (
+        path === "/register" ? <Register navigate={navigate} /> : <Home navigate={navigate} />
+      )}
 
-  if (path === "/elder") {
-    return <ElderDashboard navigate={navigate} />;
-  }
+      {!auth.isAuthenticated && path !== "/" && path !== "/register" && (
+        <Home navigate={navigate} />
+      )}
 
-  if (path === "/family") {
-    return <FamilyDashboard navigate={navigate} />;
-  }
+      {auth.isAuthenticated && path === "/elder" && (
+        <ElderDashboard navigate={navigate} />
+      )}
 
-  return null;
+      {auth.isAuthenticated && path === "/family" && (
+        <FamilyDashboard navigate={navigate} />
+      )}
+    </>
+  );
 }
 
 export default function App() {
