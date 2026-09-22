@@ -1,4 +1,6 @@
 import "dotenv/config";
+import dns from "node:dns";
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -149,13 +151,6 @@ app.use(errorHandler);
 async function start() {
   validateEnv();
 
-  try {
-    await connectDB();
-  } catch (err) {
-    console.error("❌ Failed to connect to database. Server cannot start without MongoDB.");
-    process.exit(1);
-  }
-
   const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
@@ -166,8 +161,14 @@ async function start() {
     } else {
       console.error("❌ Server error:", err.message);
     }
-    process.exit(1);
   });
+
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("⚠️ Initial database connection attempt failed. Retrying in 5s...");
+    setTimeout(connectDB, 5000);
+  }
 }
 
 start();
