@@ -2,117 +2,134 @@ import React, { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-function getStackedHeaderStrokes() {
+// Generate organic rose petal alpha sprite texture
+function createPetalTexture() {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, 64, 64);
+
+  ctx.beginPath();
+  ctx.ellipse(32, 32, 26, 18, Math.PI / 4, 0, Math.PI * 2);
+  const grad = ctx.createRadialGradient(32, 32, 4, 32, 32, 28);
+  grad.addColorStop(0, "rgba(255, 255, 255, 1.0)");
+  grad.addColorStop(0.7, "rgba(255, 255, 255, 0.85)");
+  grad.addColorStop(0.92, "rgba(255, 255, 255, 0.4)");
+  grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// Single line horizontal vector stroke points for "ELDERCARE-AI"
+function getSingleLineHeaderStrokes() {
+  const letters = [
+    // E (x: -4.4 to -3.8)
+    [
+      [[-4.4, 0.7, 0], [-4.4, -0.7, 0]],
+      [[-4.4, 0.7, 0], [-3.8, 0.7, 0]],
+      [[-4.4, 0.0, 0], [-3.9, 0.0, 0]],
+      [[-4.4, -0.7, 0], [-3.8, -0.7, 0]],
+    ],
+    // L (x: -3.6 to -3.0)
+    [
+      [[-3.6, 0.7, 0], [-3.6, -0.7, 0]],
+      [[-3.6, -0.7, 0], [-3.0, -0.7, 0]],
+    ],
+    // D (x: -2.8 to -2.2)
+    [
+      [[-2.8, 0.7, 0], [-2.8, -0.7, 0]],
+      [[-2.8, 0.7, 0], [-2.4, 0.7, 0], [-2.1, 0.35, 0], [-2.1, -0.35, 0], [-2.4, -0.7, 0], [-2.8, -0.7, 0]],
+    ],
+    // E (x: -2.0 to -1.4)
+    [
+      [[-2.0, 0.7, 0], [-2.0, -0.7, 0]],
+      [[-2.0, 0.7, 0], [-1.4, 0.7, 0]],
+      [[-2.0, 0.0, 0], [-1.5, 0.0, 0]],
+      [[-2.0, -0.7, 0], [-1.4, -0.7, 0]],
+    ],
+    // R (x: -1.2 to -0.6)
+    [
+      [[-1.2, 0.7, 0], [-1.2, -0.7, 0]],
+      [[-1.2, 0.7, 0], [-0.8, 0.7, 0], [-0.6, 0.4, 0], [-0.8, 0.05, 0], [-1.2, 0.05, 0]],
+      [[-0.9, 0.05, 0], [-0.6, -0.7, 0]],
+    ],
+    // C (x: -0.4 to 0.2)
+    [
+      [[0.2, 0.6, 0], [-0.2, 0.7, 0], [-0.4, 0.0, 0], [-0.2, -0.7, 0], [0.2, -0.6, 0]],
+    ],
+    // A (x: 0.4 to 1.0)
+    [
+      [[0.4, -0.7, 0], [0.7, 0.7, 0], [1.0, -0.7, 0]],
+      [[0.5, -0.2, 0], [0.9, -0.2, 0]],
+    ],
+    // R (x: 1.2 to 1.8)
+    [
+      [[1.2, 0.7, 0], [1.2, -0.7, 0]],
+      [[1.2, 0.7, 0], [1.6, 0.7, 0], [1.8, 0.4, 0], [1.6, 0.05, 0], [1.2, 0.05, 0]],
+      [[1.5, 0.05, 0], [1.8, -0.7, 0]],
+    ],
+    // E (x: 2.0 to 2.6)
+    [
+      [[2.0, 0.7, 0], [2.0, -0.7, 0]],
+      [[2.0, 0.7, 0], [2.6, 0.7, 0]],
+      [[2.0, 0.0, 0], [2.5, 0.0, 0]],
+      [[2.0, -0.7, 0], [2.6, -0.7, 0]],
+    ],
+    // - (x: 2.8 to 3.2)
+    [
+      [[2.8, 0.0, 0], [3.2, 0.0, 0]],
+    ],
+    // A (x: 3.4 to 4.0)
+    [
+      [[3.4, -0.7, 0], [3.7, 0.7, 0], [4.0, -0.7, 0]],
+      [[3.5, -0.2, 0], [3.9, -0.2, 0]],
+    ],
+    // I (x: 4.2 to 4.6)
+    [
+      [[4.4, 0.7, 0], [4.4, -0.7, 0]],
+      [[4.2, 0.7, 0], [4.6, 0.7, 0]],
+      [[4.2, -0.7, 0], [4.6, -0.7, 0]],
+    ],
+  ];
+
   const targetPoints = [];
-
-  const addStroke = (p1, p2, steps = 14) => {
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      targetPoints.push(new THREE.Vector3(
-        p1[0] + (p2[0] - p1[0]) * t,
-        p1[1] + (p2[1] - p1[1]) * t,
-        0
-      ));
-    }
-  };
-
-  const addCurve = (pts, count = 20) => {
-    const vectors = pts.map((p) => new THREE.Vector3(p[0], p[1], 0));
-    const curve = new THREE.CatmullRomCurve3(vectors);
-    const sampled = curve.getPoints(count);
-    sampled.forEach((pt) => targetPoints.push(pt));
-  };
-
-  // TIER 1: "ELDER" (Top, small, y: 1.25 to 1.75)
-  const yT1_Top = 1.75;
-  const yT1_Mid = 1.5;
-  const yT1_Bot = 1.25;
-
-  // E
-  addStroke([-1.5, yT1_Top], [-1.5, yT1_Bot], 12);
-  addStroke([-1.5, yT1_Top], [-1.05, yT1_Top], 8);
-  addStroke([-1.5, yT1_Mid], [-1.15, yT1_Mid], 6);
-  addStroke([-1.5, yT1_Bot], [-1.05, yT1_Bot], 8);
-
-  // L
-  addStroke([-0.9, yT1_Top], [-0.9, yT1_Bot], 12);
-  addStroke([-0.9, yT1_Bot], [-0.45, yT1_Bot], 8);
-
-  // D
-  addStroke([-0.35, yT1_Top], [-0.35, yT1_Bot], 12);
-  addCurve([[-0.35, yT1_Top], [-0.05, yT1_Top], [0.15, yT1_Mid], [-0.05, yT1_Bot], [-0.35, yT1_Bot]], 18);
-
-  // E
-  addStroke([0.25, yT1_Top], [0.25, yT1_Bot], 12);
-  addStroke([0.25, yT1_Top], [0.7, yT1_Top], 8);
-  addStroke([0.25, yT1_Mid], [0.6, yT1_Mid], 6);
-  addStroke([0.25, yT1_Bot], [0.7, yT1_Bot], 8);
-
-  // R
-  addStroke([0.8, yT1_Top], [0.8, yT1_Bot], 12);
-  addCurve([[0.8, yT1_Top], [1.15, yT1_Top], [1.3, 1.62], [1.15, yT1_Mid], [0.8, yT1_Mid]], 16);
-  addStroke([1.05, yT1_Mid], [1.3, yT1_Bot], 8);
-
-  // TIER 2: "CARE" (Middle, stylish cursive, y: 0.25 to 0.85)
-  const yT2_Top = 0.85;
-  const yT2_Mid = 0.55;
-  const yT2_Bot = 0.25;
-
-  // C
-  addCurve([[-0.7, 0.78], [-1.0, yT2_Top], [-1.3, yT2_Mid], [-1.0, yT2_Bot], [-0.7, 0.32]], 20);
-
-  // A
-  addStroke([-0.55, yT2_Bot], [-0.3, yT2_Top], 12);
-  addStroke([-0.3, yT2_Top], [-0.05, yT2_Bot], 12);
-  addStroke([-0.48, yT2_Mid], [-0.12, yT2_Mid], 6);
-
-  // R
-  addStroke([0.1, yT2_Top], [0.1, yT2_Bot], 12);
-  addCurve([[0.1, yT2_Top], [0.45, yT2_Top], [0.65, 0.7], [0.45, yT2_Mid], [0.1, yT2_Mid]], 16);
-  addStroke([0.4, yT2_Mid], [0.65, yT2_Bot], 8);
-
-  // E
-  addStroke([0.8, yT2_Top], [0.8, yT2_Bot], 12);
-  addStroke([0.8, yT2_Top], [1.3, yT2_Top], 8);
-  addStroke([0.8, yT2_Mid], [1.2, yT2_Mid], 6);
-  addStroke([0.8, yT2_Bot], [1.3, yT2_Bot], 8);
-
-  // TIER 3: "AI" (Bottom, BIG ICONIC EMBLEM, y: -1.65 to -0.45)
-  const yT3_Top = -0.45;
-  const yT3_Mid = -1.05;
-  const yT3_Bot = -1.65;
-
-  // Bold "A"
-  addStroke([-1.0, yT3_Bot], [-0.5, yT3_Top], 24);
-  addStroke([-0.5, yT3_Top], [0.0, yT3_Bot], 24);
-  addStroke([-0.82, yT3_Mid], [-0.18, yT3_Mid], 14);
-
-  // Bold "I"
-  addStroke([0.7, yT3_Top], [0.7, yT3_Bot], 24);
-  addStroke([0.35, yT3_Top], [1.05, yT3_Top], 14);
-  addStroke([0.35, yT3_Bot], [1.05, yT3_Bot], 14);
-
-  // Decorative Halo framing AI
-  const radius = 1.45;
-  const haloPoints = [];
-  for (let a = 0; a <= 32; a++) {
-    const angle = (a / 32) * Math.PI * 2;
-    haloPoints.push([
-      Math.cos(angle) * (radius * 1.05),
-      yT3_Mid + Math.sin(angle) * (radius * 0.7),
-      0
-    ]);
-  }
-  addCurve(haloPoints, 40);
+  letters.forEach((strokes) => {
+    strokes.forEach((stroke) => {
+      if (stroke.length === 2) {
+        const [p1, p2] = stroke;
+        const steps = 24;
+        for (let s = 0; s <= steps; s++) {
+          const t = s / steps;
+          targetPoints.push(new THREE.Vector3(
+            p1[0] + (p2[0] - p1[0]) * t,
+            p1[1] + (p2[1] - p1[1]) * t,
+            0
+          ));
+        }
+      } else {
+        const vectors = stroke.map((p) => new THREE.Vector3(p[0], p[1], 0));
+        const curve = new THREE.CatmullRomCurve3(vectors);
+        const pts = curve.getPoints(30);
+        pts.forEach((pt) => targetPoints.push(pt));
+      }
+    });
+  });
 
   return targetPoints;
 }
 
 const PARTICLE_COUNT = 900;
 
-function RosePetalHeaderMesh() {
+function SingleLineRosePetalHeaderMesh() {
   const pointsRef = useRef();
-  const letterTargetPoints = useMemo(() => getStackedHeaderStrokes(), []);
+  const petalTexture = useMemo(() => createPetalTexture(), []);
+  const letterTargetPoints = useMemo(() => getSingleLineHeaderStrokes(), []);
 
   const { positions, basePositions, colors, jitter } = useMemo(() => {
     const pos = new Float32Array(PARTICLE_COUNT * 3);
@@ -132,7 +149,7 @@ function RosePetalHeaderMesh() {
       const target = letterTargetPoints[i % letterTargetPoints.length];
       const tx = target.x + (Math.random() - 0.5) * 0.035;
       const ty = target.y + (Math.random() - 0.5) * 0.035;
-      const tz = target.z + (Math.random() - 0.5) * 0.035;
+      const tz = target.z;
 
       pos[i * 3] = tx;
       pos[i * 3 + 1] = ty;
@@ -195,11 +212,13 @@ function RosePetalHeaderMesh() {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.12}
+        size={0.22}
+        map={petalTexture}
         vertexColors
         transparent
         opacity={0.95}
-        sizeAttenuation
+        depthWrite={false}
+        sizeAttenuation={true}
       />
     </points>
   );
@@ -207,13 +226,13 @@ function RosePetalHeaderMesh() {
 
 export default function RosePetalHeader() {
   return (
-    <div className="relative h-36 sm:h-44 w-full select-none pointer-events-none">
+    <div className="relative h-20 sm:h-24 w-full select-none pointer-events-none">
       <Canvas
-        camera={{ position: [0, 0, 5.2], fov: 42 }}
+        camera={{ position: [0, 0, 6.4], fov: 40 }}
         gl={{ antialias: true, alpha: true }}
       >
         <ambientLight intensity={1.5} />
-        <RosePetalHeaderMesh />
+        <SingleLineRosePetalHeaderMesh />
       </Canvas>
     </div>
   );
