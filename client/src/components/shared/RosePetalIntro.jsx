@@ -1,299 +1,212 @@
-import React, { useRef, useMemo, useEffect, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import * as THREE from "three";
+import React, { useRef, useEffect, useState } from "react";
 
-const TOTAL_PETALS = 950;
+const TOTAL_PETALS = 1100;
 const INTRO_DURATION = 7.2; // seconds
 
-// Stacked Tiered Vector Strokes: ELDER (small) -> CARE (stylish) -> AI (big iconic emblem)
-function getStackedLetterStrokes() {
-  const targetPoints = [];
+// Generate high-resolution letter coordinate targets for ELDER / CARE / AI
+function generateLetterTargets(width, height) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = 800;
+  canvas.height = 700;
 
-  const addStroke = (p1, p2, steps = 16) => {
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      targetPoints.push(new THREE.Vector3(
-        p1[0] + (p2[0] - p1[0]) * t,
-        p1[1] + (p2[1] - p1[1]) * t,
-        0
-      ));
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Tier 1: "ELDER" (Top, small, spaced)
+  ctx.font = "bold 44px 'Plus Jakarta Sans', system-ui, sans-serif";
+  ctx.letterSpacing = "6px";
+  ctx.fillText("ELDER", canvas.width / 2, 140);
+
+  // Tier 2: "CARE" (Middle, stylish italic)
+  ctx.font = "italic 500 52px 'Fraunces', Georgia, serif";
+  ctx.fillText("Care", canvas.width / 2, 230);
+
+  // Tier 3: "AI" (Bottom, Large Bold Emblem)
+  ctx.font = "900 110px 'Plus Jakarta Sans', system-ui, sans-serif";
+  ctx.fillText("AI", canvas.width / 2, 380);
+
+  // Decorative Oval Halo around AI
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.ellipse(canvas.width / 2, 375, 145, 95, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Sample white pixels
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const validPoints = [];
+
+  for (let y = 0; y < canvas.height; y += 4) {
+    for (let x = 0; x < canvas.width; x += 4) {
+      const idx = (y * canvas.width + x) * 4;
+      if (imgData[idx] > 180) {
+        validPoints.push({
+          relX: (x - canvas.width / 2) / canvas.width,
+          relY: (y - canvas.height / 2) / canvas.height,
+        });
+      }
     }
-  };
-
-  const addCurve = (pts, count = 22) => {
-    const vectors = pts.map((p) => new THREE.Vector3(p[0], p[1], 0));
-    const curve = new THREE.CatmullRomCurve3(vectors);
-    const sampled = curve.getPoints(count);
-    sampled.forEach((pt) => targetPoints.push(pt));
-  };
-
-  // ==========================================
-  // TIER 1: "ELDER" (Top, small, y: 1.25 to 1.75)
-  // ==========================================
-  const yT1_Top = 1.75;
-  const yT1_Mid = 1.5;
-  const yT1_Bot = 1.25;
-
-  // E
-  addStroke([-1.5, yT1_Top], [-1.5, yT1_Bot], 12);
-  addStroke([-1.5, yT1_Top], [-1.05, yT1_Top], 8);
-  addStroke([-1.5, yT1_Mid], [-1.15, yT1_Mid], 6);
-  addStroke([-1.5, yT1_Bot], [-1.05, yT1_Bot], 8);
-
-  // L
-  addStroke([-0.9, yT1_Top], [-0.9, yT1_Bot], 12);
-  addStroke([-0.9, yT1_Bot], [-0.45, yT1_Bot], 8);
-
-  // D
-  addStroke([-0.35, yT1_Top], [-0.35, yT1_Bot], 12);
-  addCurve([[-0.35, yT1_Top], [-0.05, yT1_Top], [0.15, yT1_Mid], [-0.05, yT1_Bot], [-0.35, yT1_Bot]], 18);
-
-  // E
-  addStroke([0.25, yT1_Top], [0.25, yT1_Bot], 12);
-  addStroke([0.25, yT1_Top], [0.7, yT1_Top], 8);
-  addStroke([0.25, yT1_Mid], [0.6, yT1_Mid], 6);
-  addStroke([0.25, yT1_Bot], [0.7, yT1_Bot], 8);
-
-  // R
-  addStroke([0.8, yT1_Top], [0.8, yT1_Bot], 12);
-  addCurve([[0.8, yT1_Top], [1.15, yT1_Top], [1.3, 1.62], [1.15, yT1_Mid], [0.8, yT1_Mid]], 16);
-  addStroke([1.05, yT1_Mid], [1.3, yT1_Bot], 8);
-
-  // ==========================================
-  // TIER 2: "CARE" (Middle, stylish cursive, y: 0.25 to 0.85)
-  // ==========================================
-  const yT2_Top = 0.85;
-  const yT2_Mid = 0.55;
-  const yT2_Bot = 0.25;
-
-  // C
-  addCurve([[-0.7, 0.78], [-1.0, yT2_Top], [-1.3, yT2_Mid], [-1.0, yT2_Bot], [-0.7, 0.32]], 20);
-
-  // A
-  addStroke([-0.55, yT2_Bot], [-0.3, yT2_Top], 12);
-  addStroke([-0.3, yT2_Top], [-0.05, yT2_Bot], 12);
-  addStroke([-0.48, yT2_Mid], [-0.12, yT2_Mid], 6);
-
-  // R
-  addStroke([0.1, yT2_Top], [0.1, yT2_Bot], 12);
-  addCurve([[0.1, yT2_Top], [0.45, yT2_Top], [0.65, 0.7], [0.45, yT2_Mid], [0.1, yT2_Mid]], 16);
-  addStroke([0.4, yT2_Mid], [0.65, yT2_Bot], 8);
-
-  // E
-  addStroke([0.8, yT2_Top], [0.8, yT2_Bot], 12);
-  addStroke([0.8, yT2_Top], [1.3, yT2_Top], 8);
-  addStroke([0.8, yT2_Mid], [1.2, yT2_Mid], 6);
-  addStroke([0.8, yT2_Bot], [1.3, yT2_Bot], 8);
-
-  // ==========================================
-  // TIER 3: "AI" (Bottom, BIG ICONIC EMBLEM, y: -1.65 to -0.45)
-  // ==========================================
-  const yT3_Top = -0.45;
-  const yT3_Mid = -1.05;
-  const yT3_Bot = -1.65;
-
-  // Bold "A"
-  addStroke([-1.0, yT3_Bot], [-0.5, yT3_Top], 24);
-  addStroke([-0.5, yT3_Top], [0.0, yT3_Bot], 24);
-  addStroke([-0.82, yT3_Mid], [-0.18, yT3_Mid], 14);
-
-  // Bold "I"
-  addStroke([0.7, yT3_Top], [0.7, yT3_Bot], 24);
-  addStroke([0.35, yT3_Top], [1.05, yT3_Top], 14);
-  addStroke([0.35, yT3_Bot], [1.05, yT3_Bot], 14);
-
-  // Decorative Halo framing AI
-  const radius = 1.45;
-  const haloPoints = [];
-  for (let a = 0; a <= 36; a++) {
-    const angle = (a / 36) * Math.PI * 2;
-    haloPoints.push([
-      Math.cos(angle) * (radius * 1.05),
-      yT3_Mid + Math.sin(angle) * (radius * 0.7),
-      0
-    ]);
   }
-  addCurve(haloPoints, 44);
 
-  return targetPoints;
-}
-
-// Responsive Camera Controller for Mobile & Desktop
-function ResponsiveCameraRig() {
-  const { camera, size } = useThree();
-  useFrame(() => {
-    const isMobile = size.width < 640;
-    const targetZ = isMobile ? 6.4 : 5.4;
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
-  });
-  return null;
-}
-
-// Real 3D Instanced Rose Petal Meshes
-function Real3DRosePetals({ onStageChange }) {
-  const meshRef = useRef();
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const stageRef = useRef({ isFormed: false, isExiting: false, isDone: false });
-
-  const letterTargetPoints = useMemo(() => getStackedLetterStrokes(), []);
-
-  // Initial Petal Particle Positions & Dynamics
-  const { initialPositions, targetPositions, rotations, flutterParams } = useMemo(() => {
-    const initPos = [];
-    const targPos = [];
-    const rots = [];
-    const flutter = [];
-
-    for (let i = 0; i < TOTAL_PETALS; i++) {
-      // Dispersed in sky above
-      initPos.push({
-        x: (Math.random() - 0.5) * 8.5,
-        y: 4.5 + Math.random() * 6.5,
-        z: (Math.random() - 0.5) * 3,
-      });
-
-      const target = letterTargetPoints[i % letterTargetPoints.length];
-      targPos.push({
-        x: target.x + (Math.random() - 0.5) * 0.04,
-        y: target.y + (Math.random() - 0.5) * 0.04,
-        z: (Math.random() - 0.5) * 0.04,
-      });
-
-      rots.push({
-        rx: Math.random() * Math.PI * 2,
-        ry: Math.random() * Math.PI * 2,
-        rz: Math.random() * Math.PI * 2,
-        speedX: (Math.random() - 0.5) * 2.5,
-        speedY: (Math.random() - 0.5) * 2.5,
-        speedZ: (Math.random() - 0.5) * 2.5,
-      });
-
-      flutter.push({
-        speed: 1.2 + Math.random() * 1.5,
-        freq: 1.8 + Math.random() * 2.2,
-        amp: 0.4 + Math.random() * 0.6,
-        phase: Math.random() * Math.PI * 2,
-        scale: 0.85 + Math.random() * 0.4,
-      });
-    }
-
-    return {
-      initialPositions: initPos,
-      targetPositions: targPos,
-      rotations: rots,
-      flutterParams: flutter,
-    };
-  }, [letterTargetPoints]);
-
-  // Set individual petal colors onto the instanced mesh on mount
-  useEffect(() => {
-    if (!meshRef.current) return;
-    const palette = [
-      new THREE.Color("#e11d48"), // Rose 600
-      new THREE.Color("#be123c"), // Deep Ruby
-      new THREE.Color("#f43f5e"), // Bright Rose
-      new THREE.Color("#9f1239"), // Crimson
-      new THREE.Color("#fb7185"), // Blush Rose
-    ];
-
-    for (let i = 0; i < TOTAL_PETALS; i++) {
-      const color = palette[i % palette.length];
-      meshRef.current.setColorAt(i, color);
-    }
-    meshRef.current.instanceColor.needsUpdate = true;
-  }, []);
-
-  useFrame((state) => {
-    if (!meshRef.current) return;
-    const elapsed = state.clock.getElapsedTime();
-    const p = Math.min(1, elapsed / INTRO_DURATION);
-
-    if (elapsed > 3.8 && !stageRef.current.isFormed) {
-      stageRef.current.isFormed = true;
-      if (onStageChange) onStageChange("formed");
-    }
-    if (elapsed > 6.4 && !stageRef.current.isExiting) {
-      stageRef.current.isExiting = true;
-      if (onStageChange) onStageChange("exiting");
-    }
-    if (elapsed >= INTRO_DURATION && !stageRef.current.isDone) {
-      stageRef.current.isDone = true;
-      if (onStageChange) onStageChange("done");
-    }
-
-    // Convergence easing from 30% to 75%
-    let convergeP = 0;
-    if (p > 0.28) {
-      convergeP = Math.min(1, (p - 0.28) / 0.45);
-    }
-    const ease =
-      convergeP < 0.5
-        ? 4 * convergeP * convergeP * convergeP
-        : 1 - Math.pow(-2 * convergeP + 2, 3) / 2;
-
-    for (let i = 0; i < TOTAL_PETALS; i++) {
-      const init = initialPositions[i];
-      const target = targetPositions[i];
-      const fl = flutterParams[i];
-      const rot = rotations[i];
-
-      // Natural falling petal turbulence
-      const naturalX = init.x + Math.sin(elapsed * fl.freq + fl.phase) * fl.amp;
-      const naturalY = init.y - ((elapsed * fl.speed) % 13) + 2.5;
-      const naturalZ = init.z + Math.cos(elapsed * fl.freq * 0.7 + fl.phase) * (fl.amp * 0.5);
-
-      const curX = THREE.MathUtils.lerp(naturalX, target.x, ease);
-      const curY = THREE.MathUtils.lerp(naturalY, target.y, ease);
-      const curZ = THREE.MathUtils.lerp(naturalZ, target.z, ease);
-
-      dummy.position.set(curX, curY, curZ);
-
-      // Rotate while falling, align flat when locked
-      const curRotX = THREE.MathUtils.lerp(rot.rx + elapsed * rot.speedX, 0, ease);
-      const curRotY = THREE.MathUtils.lerp(rot.ry + elapsed * rot.speedY, 0, ease);
-      const curRotZ = THREE.MathUtils.lerp(rot.rz + elapsed * rot.speedZ, Math.sin(elapsed * 2 + i) * 0.1, ease);
-      dummy.rotation.set(curRotX, curRotY, curRotZ);
-
-      // Scale
-      const baseScale = fl.scale * (ease > 0.8 ? 0.95 + Math.sin(elapsed * 2 + i) * 0.05 : 1.0);
-      dummy.scale.set(baseScale * 0.095, baseScale * 0.13, baseScale * 0.095);
-
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
-    }
-
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  });
-
-  return (
-    <instancedMesh ref={meshRef} args={[null, null, TOTAL_PETALS]}>
-      {/* 3D Organic Curved Petal Geometry */}
-      <circleGeometry args={[1, 7]} />
-      <meshStandardMaterial
-        roughness={0.25}
-        metalness={0.15}
-        side={THREE.DoubleSide}
-      />
-    </instancedMesh>
-  );
+  return validPoints;
 }
 
 export default function RosePetalIntro({ onComplete }) {
+  const canvasRef = useRef(null);
+  const onCompleteRef = useRef(onComplete);
   const [isFormed, setIsFormed] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  const handleStageChange = (stage) => {
-    if (stage === "formed") setIsFormed(true);
-    if (stage === "exiting") setIsExiting(true);
-    if (stage === "done") {
-      if (onCompleteRef.current) onCompleteRef.current();
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    let animId;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+    window.addEventListener("resize", handleResize);
+
+    const rawTargets = generateLetterTargets(width, height);
+
+    // Rose Petal Palette
+    const colors = [
+      "#e11d48", // Rose 600
+      "#be123c", // Ruby 700
+      "#f43f5e", // Bright Rose 500
+      "#9f1239", // Deep Crimson 800
+      "#fb7185", // Blush Rose 400
+    ];
+
+    // Initialize 1,100 Petals
+    const petals = [];
+    for (let i = 0; i < TOTAL_PETALS; i++) {
+      const target = rawTargets[i % rawTargets.length] || { relX: 0, relY: 0 };
+      petals.push({
+        x: Math.random() * width,
+        y: Math.random() * -height * 1.2,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: 2.0 + Math.random() * 3.0,
+        size: 5.5 + Math.random() * 7.5,
+        rotation: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 0.08,
+        swayFreq: 1.5 + Math.random() * 2.5,
+        swayAmp: 1.2 + Math.random() * 2.2,
+        phase: Math.random() * Math.PI * 2,
+        color: colors[i % colors.length],
+        targetRelX: target.relX,
+        targetRelY: target.relY,
+      });
     }
-  };
+
+    const startTime = performance.now();
+    let hasNotifiedFormed = false;
+    let hasNotifiedExiting = false;
+    let hasCompleted = false;
+
+    const render = (now) => {
+      const elapsed = (now - startTime) / 1000;
+      const progress = Math.min(1, elapsed / INTRO_DURATION);
+
+      if (elapsed > 4.0 && !hasNotifiedFormed) {
+        hasNotifiedFormed = true;
+        setIsFormed(true);
+      }
+      if (elapsed > 6.4 && !hasNotifiedExiting) {
+        hasNotifiedExiting = true;
+        setIsExiting(true);
+      }
+      if (elapsed >= INTRO_DURATION && !hasCompleted) {
+        hasCompleted = true;
+        if (onCompleteRef.current) onCompleteRef.current();
+        return;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Scale text formation to fit screen
+      const isMobile = width < 640;
+      const scaleX = isMobile ? width * 0.95 : Math.min(520, width * 0.45);
+      const scaleY = isMobile ? width * 0.95 * (700 / 800) : Math.min(480, height * 0.65);
+      const centerX = width / 2;
+      const centerY = height / 2 - (isMobile ? 30 : 20);
+
+      // Convergence easing (from 32% to 75% of timeline)
+      let convergeP = 0;
+      if (progress > 0.3) {
+        convergeP = Math.min(1, (progress - 0.3) / 0.45);
+      }
+      const ease =
+        convergeP < 0.5
+          ? 4 * convergeP * convergeP * convergeP
+          : 1 - Math.pow(-2 * convergeP + 2, 3) / 2;
+
+      for (let i = 0; i < TOTAL_PETALS; i++) {
+        const p = petals[i];
+
+        // Falling kinematics
+        p.y += p.vy;
+        p.x += Math.sin(elapsed * p.swayFreq + p.phase) * p.swayAmp;
+        p.rotation += p.vRot;
+
+        if (p.y > height + 50 && ease === 0) {
+          p.y = -50;
+          p.x = Math.random() * width;
+        }
+
+        const targetAbsX = centerX + p.targetRelX * scaleX;
+        const targetAbsY = centerY + p.targetRelY * scaleY;
+
+        // Interpolate between falling petal and locked text point
+        const curX = p.x * (1 - ease) + targetAbsX * ease;
+        const curY = p.y * (1 - ease) + targetAbsY * ease;
+
+        // Draw individual 3D organic curved rose petal
+        ctx.save();
+        ctx.translate(curX, curY);
+        ctx.rotate(p.rotation * (1 - ease) + Math.sin(elapsed * 2 + i) * 0.1 * ease);
+
+        const petalWidth = p.size;
+        const petalHeight = p.size * 1.35;
+
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, petalWidth, petalHeight, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle soft petal highlight sheen
+        ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
+        ctx.beginPath();
+        ctx.ellipse(-petalWidth * 0.25, -petalHeight * 0.25, petalWidth * 0.45, petalHeight * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      animId = requestAnimationFrame(render);
+    };
+
+    animId = requestAnimationFrame(render);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   const handleSkip = () => {
     if (onCompleteRef.current) onCompleteRef.current();
@@ -301,39 +214,28 @@ export default function RosePetalIntro({ onComplete }) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-white text-slate-900 select-none py-6 px-4 transition-opacity duration-700 ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-between select-none py-6 px-4 transition-opacity duration-700 ${
         isExiting ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       style={{
         background: "radial-gradient(circle at center, #ffffff 40%, #fff1f2 85%, #ffe4e6 100%)",
       }}
     >
-      {/* Top Header Row with Skip Button */}
+      {/* Top Bar with Skip Button */}
       <div className="w-full max-w-5xl flex justify-end z-30">
         <button
           type="button"
           onClick={handleSkip}
-          className="rounded-full border border-rose-200 bg-white/90 px-4 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-50 hover:border-rose-300 transition backdrop-blur-md shadow-sm"
+          className="rounded-full border border-rose-200 bg-white/90 px-4 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-50 hover:border-rose-300 transition backdrop-blur-md shadow-sm cursor-pointer"
         >
           Skip ➔
         </button>
       </div>
 
-      {/* 3D Canvas Layer with 100% Real 3D Instanced Rose Petals */}
-      <div className="absolute inset-0 h-full w-full">
-        <Canvas
-          camera={{ position: [0, 0, 5.8], fov: 42 }}
-          gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-        >
-          <ResponsiveCameraRig />
-          <ambientLight intensity={1.4} />
-          <directionalLight position={[4, 6, 5]} intensity={1.6} color="#ffffff" />
-          <pointLight position={[0, 2, 4]} intensity={2.0} color="#fda4af" />
-          <Real3DRosePetals onStageChange={handleStageChange} />
-        </Canvas>
-      </div>
+      {/* High-Performance Canvas for Falling Rose Petals & Text Assembly */}
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full pointer-events-none" />
 
-      {/* Bottom Subtitle / Tagline */}
+      {/* Subtitle at Bottom */}
       <div className="relative z-20 flex flex-col items-center text-center pb-6 sm:pb-8 pointer-events-none">
         <p
           className={`font-serif italic text-sm sm:text-base tracking-widest text-rose-800/80 transition-all duration-1000 ${
