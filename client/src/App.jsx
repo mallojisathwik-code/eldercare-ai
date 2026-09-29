@@ -5,7 +5,7 @@ import ElderDashboard from "./pages/ElderDashboard.jsx";
 import FamilyDashboard from "./pages/FamilyDashboard.jsx";
 import Register from "./pages/Register.jsx";
 import Home from "./pages/Home.jsx";
-import PrestigiousHealthIntro from "./components/shared/PrestigiousHealthIntro.jsx";
+import NetflixStyleHealthIntro from "./components/shared/NetflixStyleHealthIntro.jsx";
 
 function Router() {
   const auth = useAuth();
@@ -47,8 +47,8 @@ function Router() {
 
   return (
     <>
-      {/* Prestigious Healthcare Brand Intro Animation */}
-      {showIntro && <PrestigiousHealthIntro onComplete={handleIntroComplete} />}
+      {/* Netflix-Style Dynamic Red Curves Brand Intro */}
+      {showIntro && <NetflixStyleHealthIntro onComplete={handleIntroComplete} />}
 
       {!auth.isAuthenticated && (path === "/" || path === "/register") && (
         path === "/register" ? <Register navigate={navigate} /> : <Home navigate={navigate} />

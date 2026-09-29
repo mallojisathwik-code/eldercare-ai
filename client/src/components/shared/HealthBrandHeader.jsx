@@ -28,14 +28,19 @@ export default function HealthBrandHeader() {
         </svg>
       </div>
 
-      {/* Brand Name */}
-      <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-        ElderCare <span className="text-rose-600">AI</span>
-      </h2>
+      {/* Brand Lockup */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+          ELDER<span className="text-rose-600 font-extrabold">CARE</span>
+        </span>
+        <span className="rounded-lg bg-rose-600 px-2 py-0.5 text-sm sm:text-base font-black text-white shadow-sm shadow-rose-600/30">
+          AI
+        </span>
+      </div>
 
       {/* Subtitle */}
-      <p className="mt-1 text-xs text-slate-500 font-medium">
-        Voice-first companion for seniors
+      <p className="mt-1 text-xs text-slate-500 font-medium tracking-wide">
+        Autonomous Cognitive & Health Companion for Seniors
       </p>
     </div>
   );
