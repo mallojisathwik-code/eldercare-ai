@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth.js";
-import RosePetalHeader from "../components/shared/RosePetalHeader.jsx";
+import HealthBrandHeader from "../components/shared/HealthBrandHeader.jsx";
 
 export default function Home({ navigate }) {
   const { login, register } = useAuth();
@@ -50,13 +50,8 @@ export default function Home({ navigate }) {
       <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
           
-          {/* 3D Rose Petal ELDERCARE-AI Animated Header */}
-          <div className="mb-2 flex flex-col items-center">
-            <RosePetalHeader />
-            <p className="text-xs font-serif italic text-rose-600 -mt-2 mb-3">
-              Voice-first companion for seniors
-            </p>
-          </div>
+          {/* Health Brand Header */}
+          <HealthBrandHeader />
 
           {/* Clean White Card */}
           <div className="rounded-2xl border border-rose-100 bg-white p-7 sm:p-8 shadow-xl shadow-rose-950/5">

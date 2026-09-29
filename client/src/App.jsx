@@ -5,7 +5,7 @@ import ElderDashboard from "./pages/ElderDashboard.jsx";
 import FamilyDashboard from "./pages/FamilyDashboard.jsx";
 import Register from "./pages/Register.jsx";
 import Home from "./pages/Home.jsx";
-import RosePetalIntro from "./components/shared/RosePetalIntro.jsx";
+import PrestigiousHealthIntro from "./components/shared/PrestigiousHealthIntro.jsx";
 
 function Router() {
   const auth = useAuth();
@@ -47,8 +47,8 @@ function Router() {
 
   return (
     <>
-      {/* 3D Rose Petals Falling & Forming ELDERCARE-AI Animation on White Background */}
-      {showIntro && <RosePetalIntro onComplete={handleIntroComplete} />}
+      {/* Prestigious Healthcare Brand Intro Animation */}
+      {showIntro && <PrestigiousHealthIntro onComplete={handleIntroComplete} />}
 
       {!auth.isAuthenticated && (path === "/" || path === "/register") && (
         path === "/register" ? <Register navigate={navigate} /> : <Home navigate={navigate} />
